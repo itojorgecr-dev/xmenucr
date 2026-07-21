@@ -15,28 +15,39 @@ export function EmpresaProvider({ children }) {
   const [empresa, setEmpresa] = useState(null)
   const [rol, setRol] = useState(null)
 
+  const [error, setError] = useState(false)
+
   const cargar = useCallback(async () => {
     if (!user) {
-      setMembresias([]); setEmpresa(null); setRol(null); setCargando(false)
+      setMembresias([]); setEmpresa(null); setRol(null); setError(false); setCargando(false)
       return
     }
     setCargando(true)
-    const mems = await membresiasDe(user.uid)
-    setMembresias(mems)
+    setError(false)
+    try {
+      const mems = await membresiasDe(user.uid)
+      setMembresias(mems)
 
-    if (mems.length === 0) {
-      setEmpresa(null); setRol(null); setCargando(false)
-      return
+      if (mems.length === 0) {
+        setEmpresa(null); setRol(null)
+        return
+      }
+      // Empresa activa: la guardada en localStorage si sigue siendo válida.
+      const guardada = localStorage.getItem(LS_EMPRESA)
+      const activa =
+        mems.find((m) => m.empresaId === guardada) || mems[0]
+      const emp = await empresaPorId(activa.empresaId)
+      setEmpresa(emp)
+      setRol(activa.rol)
+      if (emp) localStorage.setItem(LS_EMPRESA, emp.id)
+    } catch (e) {
+      // Si la carga falla (red, permisos transitorios), NO mandamos al
+      // onboarding: se muestra reintento para no crear empresas duplicadas.
+      console.error('EmpresaContext:', e)
+      setError(true)
+    } finally {
+      setCargando(false)
     }
-    // Empresa activa: la guardada en localStorage si sigue siendo válida.
-    const guardada = localStorage.getItem(LS_EMPRESA)
-    const activa =
-      mems.find((m) => m.empresaId === guardada) || mems[0]
-    const emp = await empresaPorId(activa.empresaId)
-    setEmpresa(emp)
-    setRol(activa.rol)
-    if (emp) localStorage.setItem(LS_EMPRESA, emp.id)
-    setCargando(false)
   }, [user])
 
   useEffect(() => { cargar() }, [cargar])
@@ -54,7 +65,7 @@ export function EmpresaProvider({ children }) {
   return (
     <EmpresaCtx.Provider
       value={{
-        cargando, membresias, empresa, rol, plan,
+        cargando, membresias, empresa, rol, plan, error,
         tieneEmpresa: membresias.length > 0,
         recargar: cargar,
         cambiarEmpresa,

@@ -106,6 +106,22 @@ export default function Config() {
     setNuevoRest(''); toast('Restaurante agregado.')
   }
 
+  async function renombrarRestaurante(r) {
+    const nuevo = prompt('Nuevo nombre del restaurante:', r.nombre)?.trim()
+    if (!nuevo || nuevo === r.nombre) return
+    await updateDoc(doc(db, 'restaurantes', r.id), { nombre: nuevo })
+    // Si la empresa se llama igual (creada en el onboarding), se renombra junto.
+    if (empresa.nombre === r.nombre) {
+      await updateDoc(doc(db, 'empresas', empresa.id), { nombre: nuevo })
+      await recargar()
+    }
+    await registrarBitacora({
+      empresaId: empresa.id, uid: user.uid, correo: user.email,
+      accion: 'Renombró restaurante', detalle: `${r.nombre} → ${nuevo}`,
+    })
+    toast('Nombre actualizado.')
+  }
+
   async function cambiarMoneda(codigo) {
     await updateDoc(doc(db, 'empresas', empresa.id), { moneda: codigo })
     await recargar()
@@ -173,6 +189,8 @@ export default function Config() {
             {restaurantes.map((r) => (
               <div key={r.id} className="row spread" style={{ borderBottom: '1px solid var(--borde)', paddingBottom: 8 }}>
                 <span>{r.nombre}</span>
+                <button className="btn btn-fantasma" style={{ padding: '4px 10px' }}
+                  title="Cambiar nombre" onClick={() => renombrarRestaurante(r)}>✏️</button>
               </div>
             ))}
           </div>

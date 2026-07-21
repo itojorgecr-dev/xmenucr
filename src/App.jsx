@@ -62,13 +62,28 @@ function ConfigFaltante() {
 // Exige sesión (y correo verificado en cuentas de correo/clave).
 // Redirige al onboarding si el usuario aún no tiene empresa.
 function RutaApp({ children, requiereEmpresa = true }) {
-  const { user, cargando: cargaAuth, requiereVerificacion } = useAuth()
-  const { tieneEmpresa, cargando: cargaEmp } = useEmpresa()
+  const { user, cargando: cargaAuth, requiereVerificacion, salir } = useAuth()
+  const { tieneEmpresa, cargando: cargaEmp, error: errorEmp, recargar } = useEmpresa()
   const location = useLocation()
 
   if (cargaAuth || cargaEmp) return <Cargando />
   if (!user) return <Navigate to="/ingresar" replace state={{ from: location }} />
   if (requiereVerificacion) return <VerificarCorreo />
+  if (errorEmp) {
+    // Falló la carga de la empresa: reintentar, nunca re-onboarding.
+    return (
+      <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
+        <div className="card" style={{ maxWidth: 440 }}>
+          <h2>😕 No pudimos cargar tu restaurante</h2>
+          <p className="muted">Puede ser un problema de conexión. Probá de nuevo.</p>
+          <div className="stack mt">
+            <button className="btn btn-dorado btn-bloque" onClick={recargar}>↻ Reintentar</button>
+            <button className="btn btn-fantasma btn-bloque" onClick={salir}>Salir</button>
+          </div>
+        </div>
+      </div>
+    )
+  }
   if (requiereEmpresa && !tieneEmpresa) return <Navigate to="/onboarding" replace />
   return children
 }
