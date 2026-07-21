@@ -7,7 +7,7 @@ import { Link } from 'react-router-dom'
 import {
   collection, getDocs, doc, updateDoc, query, where, serverTimestamp,
 } from 'firebase/firestore'
-import { db } from '../firebase'
+import { auth, db } from '../firebase'
 import { useAuth } from '../auth/AuthContext'
 import { useToast } from '../components/Toast'
 import Cargando from '../components/Cargando'
@@ -66,6 +66,28 @@ export default function Superadmin() {
     )
   }
 
+  // Activa el permiso a mano y muestra la respuesta EXACTA del servidor,
+  // para diagnosticar si algo falla (config de la cuenta de servicio, etc.).
+  async function activarPermiso() {
+    try {
+      const token = await auth.currentUser.getIdToken()
+      const r = await fetch('/api/claim-superadmin', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) {
+        setError(`El activador de permisos respondió (${r.status}): ${j.error || 'sin detalle'}. Mandale esta pantalla a Claude para arreglarlo.`)
+        return
+      }
+      await auth.currentUser.getIdToken(true) // refresca el token con el claim
+      toast('Permiso de superadmin activado. ✅')
+      cargar()
+    } catch (e) {
+      setError(`No se pudo llamar al activador: ${e.message}`)
+    }
+  }
+
   async function cambiarPlan(empresa, planId) {
     if (planId === empresa.plan) return
     if (!confirm(`¿Cambiar "${empresa.nombre}" de ${PLANES[empresa.plan]?.nombre || empresa.plan} a ${PLANES[planId].nombre}?`)) return
@@ -114,9 +136,10 @@ export default function Superadmin() {
       {error && (
         <div className="aviso aviso-peligro">
           <p style={{ margin: 0 }}>{error}</p>
-          <div className="row mt" style={{ gap: 8 }}>
+          <div className="row mt row-wrap" style={{ gap: 8 }}>
+            <button className="btn btn-dorado" onClick={activarPermiso}>🔑 Activar permiso ahora</button>
             <button className="btn btn-fantasma" onClick={cargar}>↻ Reintentar</button>
-            <button className="btn btn-fantasma" onClick={salir}>Salir para renovar sesión</button>
+            <button className="btn btn-fantasma" onClick={salir}>Salir</button>
           </div>
         </div>
       )}

@@ -8,6 +8,8 @@ import { getAuth } from 'firebase-admin/auth'
 function adminApp() {
   if (getApps().length) return getApps()[0]
   const cuenta = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}')
+  // Arreglo clásico: Vercel a veces guarda la llave con \n literales.
+  if (cuenta.private_key) cuenta.private_key = cuenta.private_key.replace(/\\n/g, '\n')
   return initializeApp({ credential: cert(cuenta) })
 }
 

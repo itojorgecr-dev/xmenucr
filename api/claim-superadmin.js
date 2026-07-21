@@ -8,7 +8,19 @@ const SUPERADMIN_CORREO = 'itojorgecr@gmail.com'
 
 function adminApp() {
   if (getApps().length) return getApps()[0]
-  const cuenta = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}')
+  const crudo = process.env.FIREBASE_SERVICE_ACCOUNT
+  if (!crudo) throw new Error('FIREBASE_SERVICE_ACCOUNT no está configurada en Vercel')
+  let cuenta
+  try {
+    cuenta = JSON.parse(crudo)
+  } catch {
+    throw new Error('FIREBASE_SERVICE_ACCOUNT no es un JSON válido (pegá el archivo completo de la cuenta de servicio)')
+  }
+  // Arreglo clásico: Vercel a veces guarda la llave con \n literales.
+  if (cuenta.private_key) cuenta.private_key = cuenta.private_key.replace(/\\n/g, '\n')
+  if (!cuenta.private_key || !cuenta.client_email) {
+    throw new Error('A FIREBASE_SERVICE_ACCOUNT le faltan private_key o client_email')
+  }
   return initializeApp({ credential: cert(cuenta) })
 }
 
@@ -16,11 +28,18 @@ export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método no permitido' })
   }
+  let admin
+  try {
+    admin = getAuth(adminApp())
+  } catch (e) {
+    // Error de configuración: se devuelve el detalle para poder arreglarlo.
+    console.error('claim-superadmin config:', e?.message)
+    return res.status(500).json({ error: `Configuración: ${e.message}` })
+  }
   try {
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
     if (!token) return res.status(401).json({ error: 'Falta el token de sesión' })
 
-    const admin = getAuth(adminApp())
     const decoded = await admin.verifyIdToken(token)
 
     const esElCorreo = (decoded.email || '').toLowerCase() === SUPERADMIN_CORREO
