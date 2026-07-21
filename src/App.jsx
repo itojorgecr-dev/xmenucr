@@ -9,6 +9,7 @@ import Cargando from './components/Cargando'
 import Layout from './components/Layout'
 import Landing from './pages/Landing'
 import Login from './auth/Login'
+import VerificarCorreo from './auth/VerificarCorreo'
 import Bienvenida from './onboarding/Bienvenida'
 import Menu from './pages/Menu'
 import Ingredientes from './pages/Ingredientes'
@@ -58,14 +59,16 @@ function ConfigFaltante() {
   )
 }
 
-// Exige sesión. Redirige al onboarding si el usuario aún no tiene empresa.
+// Exige sesión (y correo verificado en cuentas de correo/clave).
+// Redirige al onboarding si el usuario aún no tiene empresa.
 function RutaApp({ children, requiereEmpresa = true }) {
-  const { user, cargando: cargaAuth } = useAuth()
+  const { user, cargando: cargaAuth, requiereVerificacion } = useAuth()
   const { tieneEmpresa, cargando: cargaEmp } = useEmpresa()
   const location = useLocation()
 
   if (cargaAuth || cargaEmp) return <Cargando />
   if (!user) return <Navigate to="/ingresar" replace state={{ from: location }} />
+  if (requiereVerificacion) return <VerificarCorreo />
   if (requiereEmpresa && !tieneEmpresa) return <Navigate to="/onboarding" replace />
   return children
 }
