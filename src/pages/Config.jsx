@@ -176,10 +176,33 @@ export default function Config() {
         </form>
       </div>
 
-      {/* Categorías, proveedores, unidades — bloques reutilizables */}
+      {/* Categorías y unidades — bloques reutilizables */}
       <ListaEditable titulo="Categorías" emoji="🏷" coleccion="categorias" recursoLimite="categorias" placeholder="Ej: Cócteles" />
-      <ListaEditable titulo="Proveedores" emoji="🚚" coleccion="proveedores" recursoLimite="proveedores" placeholder="Ej: Verdulería La Fresca" />
       <ListaEditable titulo="Unidades abstractas" emoji="📏" coleccion="unidadesAbs" recursoLimite={null} placeholder={`Ej: bandeja (base: ${UNIDADES_ABSTRACTAS_BASE.join(', ')})`} />
+
+      {/* Proveedores: ficha completa en su propia pantalla */}
+      <div className="card">
+        <div className="row spread">
+          <div>
+            <h3 style={{ margin: 0 }}>🚚 Proveedores</h3>
+            <div className="muted" style={{ fontSize: 13 }}>Ficha completa: contacto, correo, WhatsApp, días de entrega y lista de precios.</div>
+          </div>
+          <Link to="/app/proveedores" className="btn btn-dorado" style={{ padding: '8px 14px' }}>Abrir</Link>
+        </div>
+      </div>
+
+      {/* Bitácora (dueño y editor) */}
+      {permisos.bitacora && (
+        <div className="card">
+          <div className="row spread">
+            <div>
+              <h3 style={{ margin: 0 }}>📋 Bitácora</h3>
+              <div className="muted" style={{ fontSize: 13 }}>Todo con quién, qué y cuándo.</div>
+            </div>
+            <Link to="/app/bitacora" className="btn btn-dorado" style={{ padding: '8px 14px' }}>Abrir</Link>
+          </div>
+        </div>
+      )}
 
       {/* Colaboradores (solo Empresarial) */}
       {plan.roles ? (

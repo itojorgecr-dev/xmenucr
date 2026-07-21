@@ -154,3 +154,60 @@ label.campo span { display: block; margin-bottom: 6px; color: var(--texto-tenue)
   padding: 12px 18px; border-radius: 12px; box-shadow: var(--sombra);
   font-weight: 600; max-width: 90vw;
 }
+
+/* ── Hoja (bottom sheet) ── */
+.hoja-fondo {
+  position: fixed; inset: 0; z-index: 70;
+  background: rgba(10, 8, 30, 0.6); backdrop-filter: blur(3px);
+}
+.hoja {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 71;
+  background: var(--panel); border-top: 1px solid var(--borde);
+  border-radius: 18px 18px 0 0; box-shadow: var(--sombra);
+  max-height: 85vh; display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+  animation: subir 0.18s ease-out;
+}
+@keyframes subir { from { transform: translateY(30%); opacity: 0.4; } to { transform: none; opacity: 1; } }
+.hoja-cabecera {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 8px;
+}
+.hoja-cuerpo { overflow-y: auto; padding: 0 16px 16px; }
+
+/* ── Buscador alfabético ── */
+.letras-rail {
+  display: flex; flex-wrap: wrap; gap: 4px; padding: 8px 0;
+  position: sticky; top: 0; background: var(--panel); z-index: 2;
+}
+.letras-rail button {
+  border: 1px solid var(--borde); background: transparent; color: var(--texto-tenue);
+  border-radius: 8px; min-width: 28px; padding: 3px 6px; font-weight: 700; cursor: pointer;
+  font-size: 12px;
+}
+.letras-rail button.activa { background: var(--dorado); color: #1a1533; border-color: var(--dorado); }
+.fila-busqueda {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 10px 4px; border-bottom: 1px solid var(--borde); cursor: pointer;
+}
+.fila-busqueda:hover { background: #ffffff08; }
+
+/* Chips de filtro */
+.chips { display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; -webkit-overflow-scrolling: touch; }
+.chips .chip {
+  border: 1px solid var(--borde); background: transparent; color: var(--texto-tenue);
+  border-radius: 999px; padding: 6px 14px; font-weight: 700; font-size: 13px;
+  white-space: nowrap; cursor: pointer;
+}
+.chips .chip.activa { background: var(--dorado); color: #1a1533; border-color: var(--dorado); }
+
+/* Stepper −/＋ */
+.stepper { display: inline-flex; align-items: center; gap: 8px; }
+.stepper button {
+  width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--borde);
+  background: var(--panel-2); color: var(--texto); font-size: 18px; font-weight: 800; cursor: pointer;
+}
+.stepper span { min-width: 28px; text-align: center; font-weight: 800; }
+
+/* Foto del platillo */
+.foto-item { width: 100%; max-height: 220px; object-fit: cover; border-radius: 12px; }

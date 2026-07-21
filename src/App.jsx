@@ -16,6 +16,8 @@ import Recetas from './pages/Recetas'
 import Pedidos from './pages/Pedidos'
 import Config from './pages/Config'
 import Planes from './pages/Planes'
+import Proveedores from './pages/Proveedores'
+import Bitacora from './pages/Bitacora'
 import Superadmin from './pages/Superadmin'
 
 // Aviso cuando falta la config de Firebase (deploy sin variables).
@@ -93,6 +95,8 @@ function Rutas() {
         <Route path="recetas" element={<Recetas />} />
         <Route path="pedidos" element={<Pedidos />} />
         <Route path="config" element={<Config />} />
+        <Route path="proveedores" element={<Proveedores />} />
+        <Route path="bitacora" element={<Bitacora />} />
         <Route path="planes" element={<Planes />} />
       </Route>
 
