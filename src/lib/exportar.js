@@ -81,6 +81,21 @@ export function exportarListaPreciosExcel({ proveedor, ingredientes, empresaNomb
   XLSX.writeFile(wb, `${archivo('precios ' + proveedor.nombre)}.xlsx`)
 }
 
+// Pedido a proveedor (con o sin precios).
+export function exportarPedidoExcel({ empresaNombre, proveedorNombre, lineas, conPrecios, total }) {
+  const encabezados = conPrecios
+    ? ['Producto', 'Cantidad', 'Presentación', 'Precio unit.', 'Subtotal']
+    : ['Producto', 'Cantidad', 'Presentación']
+  const filas = lineas.map((l) => conPrecios
+    ? [l.nombre, l.cantidad, l.presentacion, Number(l.costoUnit) || 0, (Number(l.cantidad) || 0) * (Number(l.costoUnit) || 0)]
+    : [l.nombre, l.cantidad, l.presentacion])
+  if (conPrecios) filas.push(['TOTAL', '', '', '', Number(total) || 0])
+  const wb = XLSX.utils.book_new()
+  XLSX.utils.book_append_sheet(wb,
+    hojaConMarca(`Pedido — ${proveedorNombre}`, empresaNombre, encabezados, filas), 'Pedido')
+  XLSX.writeFile(wb, `${archivo('pedido ' + proveedorNombre)}.xlsx`)
+}
+
 // ── PDF ────────────────────────────────────────────────────────
 
 function bandaDeMarca(doc, titulo, empresaNombre) {

@@ -3,7 +3,8 @@
 // (Enviar por correo vía Resend y exportar Excel llegan en PR 4.)
 import { useMemo, useState } from 'react'
 import { addDoc, collection, serverTimestamp } from 'firebase/firestore'
-import { db } from '../firebase'
+import { auth, db } from '../firebase'
+import { exportarPedidoExcel } from '../lib/exportar'
 import { useAuth } from '../auth/AuthContext'
 import { useEmpresa } from '../context/EmpresaContext'
 import { useToast } from '../components/Toast'
@@ -27,6 +28,7 @@ export default function Pedidos() {
   const [carrito, setCarrito] = useState({}) // {ingredienteId: cantidad}
   const [conPrecios, setConPrecios] = useState(true)
   const [guardando, setGuardando] = useState(false)
+  const [enviando, setEnviando] = useState(false)
 
   const proveedor = proveedores.find((p) => p.id === proveedorId)
   const delProveedor = useMemo(() => {
@@ -82,22 +84,29 @@ export default function Pedidos() {
     }
   }
 
+  const lineasDoc = () => lineas.map((l) => ({
+    ingredienteId: l.ing.id, nombre: l.ing.nombre, cantidad: l.cant,
+    presentacion: `${l.ing.cantPresentacion} ${l.ing.unidad}`, costoUnit: Number(l.ing.costo) || 0,
+  }))
+
+  async function guardarDoc({ enviadoA = '' } = {}) {
+    await addDoc(collection(db, 'pedidos'), {
+      empresaId: empresa.id,
+      proveedorId,
+      proveedorNombre: proveedor?.nombre || '',
+      lineas: lineasDoc(),
+      total,
+      enviadoA,
+      creadoEl: serverTimestamp(),
+      creadoPor: user.email || '',
+    })
+  }
+
   async function guardarPedido() {
     if (!lineas.length) return
     setGuardando(true)
     try {
-      await addDoc(collection(db, 'pedidos'), {
-        empresaId: empresa.id,
-        proveedorId,
-        proveedorNombre: proveedor?.nombre || '',
-        lineas: lineas.map((l) => ({
-          ingredienteId: l.ing.id, nombre: l.ing.nombre, cantidad: l.cant,
-          presentacion: `${l.ing.cantPresentacion} ${l.ing.unidad}`, costoUnit: Number(l.ing.costo) || 0,
-        })),
-        total,
-        creadoEl: serverTimestamp(),
-        creadoPor: user.email || '',
-      })
+      await guardarDoc()
       await registrarBitacora({
         empresaId: empresa.id, uid: user.uid, correo: user.email,
         accion: 'Creó pedido', detalle: `${proveedor?.nombre} (${lineas.length} líneas)`,
@@ -108,6 +117,42 @@ export default function Pedidos() {
       console.error(err); toast('No se pudo guardar el pedido.')
     } finally {
       setGuardando(false)
+    }
+  }
+
+  // ✉️ Envía el pedido por correo al proveedor (Resend) y lo guarda.
+  async function enviarPedido() {
+    if (!lineas.length || !proveedor?.correo) return
+    setEnviando(true)
+    try {
+      const token = await auth.currentUser.getIdToken()
+      const r = await fetch('/api/enviar-pedido', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          proveedorEmail: proveedor.correo,
+          proveedorNombre: proveedor.nombre,
+          empresaNombre: empresa.nombre,
+          lineas: lineasDoc(),
+          conPrecios,
+          total,
+          simbolo: empresa.moneda === 'USD' ? '$' : '₡',
+        }),
+      })
+      const j = await r.json().catch(() => ({}))
+      if (!r.ok) throw new Error(j.error || 'No se pudo enviar')
+      await guardarDoc({ enviadoA: proveedor.correo })
+      await registrarBitacora({
+        empresaId: empresa.id, uid: user.uid, correo: user.email,
+        accion: 'Envió pedido por correo', detalle: `${proveedor.nombre} → ${proveedor.correo}`,
+      })
+      toast(`Pedido enviado a ${proveedor.correo} ✉️`)
+      setCarrito({})
+    } catch (err) {
+      console.error(err)
+      toast(err.message || 'No se pudo enviar el pedido.', 6000)
+    } finally {
+      setEnviando(false)
     }
   }
 
@@ -165,14 +210,27 @@ export default function Pedidos() {
               </div>
               <pre className="muted" style={{ whiteSpace: 'pre-wrap', fontSize: 13, fontFamily: 'inherit' }}>{textoPedido()}</pre>
               <div className="row" style={{ gap: 8 }}>
-                <button className="btn btn-fantasma" style={{ flex: 1 }} onClick={copiar}>📋 Copiar texto</button>
-                <button className="btn btn-dorado" style={{ flex: 1 }} onClick={guardarPedido} disabled={guardando}>
-                  {guardando ? 'Guardando…' : '💾 Guardar pedido'}
+                <button className="btn btn-fantasma" style={{ flex: 1 }} onClick={copiar}>📋 Copiar</button>
+                <button className="btn btn-fantasma" style={{ flex: 1 }}
+                  onClick={() => exportarPedidoExcel({
+                    empresaNombre: empresa.nombre, proveedorNombre: proveedor?.nombre || '',
+                    lineas: lineasDoc(), conPrecios, total,
+                  })}>
+                  📊 Excel
+                </button>
+                <button className="btn btn-fantasma" style={{ flex: 1 }} onClick={guardarPedido} disabled={guardando || enviando}>
+                  {guardando ? 'Guardando…' : '💾 Guardar'}
                 </button>
               </div>
-              <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
-                ✉️ El envío por correo al proveedor y el Excel llegan en la siguiente entrega.
-              </p>
+              <button className="btn btn-dorado btn-bloque" onClick={enviarPedido}
+                disabled={enviando || guardando || !proveedor?.correo}>
+                {enviando ? 'Enviando…' : '✉️ Enviar al proveedor por correo'}
+              </button>
+              {!proveedor?.correo && (
+                <p className="muted" style={{ fontSize: 12, marginBottom: 0 }}>
+                  Para enviarlo por correo, agregale el correo a este proveedor en su ficha (🚚 Proveedores).
+                </p>
+              )}
             </div>
           )}
         </>
