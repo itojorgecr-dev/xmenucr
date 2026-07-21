@@ -38,7 +38,7 @@ function useAltaSimple(coleccion, recursoLimite) {
   return agregar
 }
 
-function ListaEditable({ titulo, emoji, coleccion, recursoLimite, placeholder, extra }) {
+function ListaEditable({ titulo, emoji, coleccion, recursoLimite, placeholder, extra, nota }) {
   const { datos, cargando } = useColeccion(coleccion)
   const [nombre, setNombre] = useState('')
   const agregar = useAltaSimple(coleccion, recursoLimite)
@@ -57,6 +57,7 @@ function ListaEditable({ titulo, emoji, coleccion, recursoLimite, placeholder, e
   return (
     <div className="card">
       <h3>{emoji} {titulo}</h3>
+      {nota && <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>{nota}</p>}
       {cargando ? (
         <p className="muted">Cargando…</p>
       ) : (
@@ -160,6 +161,11 @@ export default function Config() {
       {/* Restaurantes (según plan) */}
       <div className="card">
         <h3>🏠 Restaurantes <span className="muted" style={{ fontSize: 13 }}>({restaurantes.length}/{plan.restaurantes})</span></h3>
+        <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
+          💡 Tranquilo: tus ingredientes, recetas y proveedores se comparten entre
+          <b> todos</b> tus restaurantes — no hay que duplicarlos. Solo los ítems del
+          menú son propios de cada restaurante.
+        </p>
         {cargR ? <p className="muted">Cargando…</p> : (
           <div className="stack">
             {restaurantes.map((r) => (
@@ -178,7 +184,9 @@ export default function Config() {
 
       {/* Categorías y unidades — bloques reutilizables */}
       <ListaEditable titulo="Categorías" emoji="🏷" coleccion="categorias" recursoLimite="categorias" placeholder="Ej: Cócteles" />
-      <ListaEditable titulo="Unidades abstractas" emoji="📏" coleccion="unidadesAbs" recursoLimite={null} placeholder={`Ej: bandeja (base: ${UNIDADES_ABSTRACTAS_BASE.join(', ')})`} />
+      <ListaEditable titulo="Unidades abstractas" emoji="📏" coleccion="unidadesAbs" recursoLimite={null}
+        placeholder="Ej: bandeja, saco, caja…"
+        nota={`Ya vienen incluidas: ${UNIDADES_ABSTRACTAS_BASE.join(' · ')}. Aquí solo agregás las tuyas propias.`} />
 
       {/* Proveedores: ficha completa en su propia pantalla */}
       <div className="card">

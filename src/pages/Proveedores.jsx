@@ -15,6 +15,7 @@ import Hoja from '../components/Hoja'
 import { formatMoneda } from '../lib/format'
 import { registrarBitacora } from '../lib/empresa'
 import { chequearLimite } from '../lib/limites'
+import { exportarListaPreciosExcel, exportarListaPreciosPDF } from '../lib/exportar'
 
 const DIAS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
 const VACIO = { nombre: '', contacto: '', correo: '', whatsapp: '', direccion: '', diasEntrega: [], jornada: '' }
@@ -224,9 +225,18 @@ export default function Proveedores() {
               </div>
             ))}
             {ingredientesDe.length > 0 && (
-              <button className="btn btn-dorado btn-bloque" onClick={copiarLista}>📋 Copiar lista</button>
+              <div className="row" style={{ gap: 8 }}>
+                <button className="btn btn-dorado" style={{ flex: 1 }} onClick={copiarLista}>📋 Copiar</button>
+                <button className="btn btn-fantasma" style={{ flex: 1 }}
+                  onClick={() => exportarListaPreciosExcel({ proveedor: listaDe, ingredientes: ingredientesDe, empresaNombre: empresa.nombre })}>
+                  📊 Excel
+                </button>
+                <button className="btn btn-fantasma" style={{ flex: 1 }}
+                  onClick={() => exportarListaPreciosPDF({ proveedor: listaDe, ingredientes: ingredientesDe, empresaNombre: empresa.nombre, moneda: empresa?.moneda })}>
+                  📄 PDF
+                </button>
+              </div>
             )}
-            <p className="muted" style={{ fontSize: 12 }}>La exportación a Excel/PDF llega en la siguiente entrega.</p>
           </div>
         )}
       </Hoja>

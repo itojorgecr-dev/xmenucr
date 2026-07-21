@@ -1,8 +1,9 @@
 // XMenú CR — 🧺 Ingredientes: CRUD completo.
 // Proveedor obligatorio, presentación con tablas de unidades EXACTAS,
-// equivalencias visibles, nota opcional, aviso de usos al editar y
-// eliminación con confirm que muestra dónde se usa.
-import { useMemo, useState } from 'react'
+// equivalencias visibles, nota opcional, código/SKU, aviso de usos al
+// editar, eliminación con confirm, import masivo desde Excel (con
+// plantilla descargable) y export a Excel/PDF.
+import { useMemo, useRef, useState } from 'react'
 import { addDoc, collection, deleteDoc, doc, serverTimestamp, updateDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import { useAuth } from '../auth/AuthContext'
@@ -17,8 +18,10 @@ import { registrarBitacora } from '../lib/empresa'
 import { chequearLimite } from '../lib/limites'
 import { usosDe, costoPorBase } from '../lib/costeo'
 import { UNIDADES_VOLUMEN, UNIDADES_MASA, UNIDADES_ABSTRACTAS_BASE } from '../lib/constants'
+import { exportarIngredientesExcel, exportarIngredientesPDF } from '../lib/exportar'
+import { descargarPlantillaIngredientes, importarIngredientes } from '../lib/importar'
 
-const VACIO = { nombre: '', proveedorId: '', cantPresentacion: 1, unidad: 'g', costo: '', nota: '' }
+const VACIO = { codigo: '', nombre: '', proveedorId: '', cantPresentacion: 1, unidad: 'g', costo: '', nota: '' }
 
 export default function Ingredientes() {
   const { user } = useAuth()
@@ -34,6 +37,8 @@ export default function Ingredientes() {
   const [editando, setEditando] = useState(null) // null | {id?, ...campos}
   const [guardando, setGuardando] = useState(false)
   const [filtroProv, setFiltroProv] = useState('')
+  const [importando, setImportando] = useState(false)
+  const inputImport = useRef(null)
 
   const provPorId = useMemo(() => Object.fromEntries(proveedores.map((p) => [p.id, p.nombre])), [proveedores])
 
@@ -69,6 +74,7 @@ export default function Ingredientes() {
     setGuardando(true)
     try {
       const datos = {
+        codigo: editando.codigo?.trim() || '',
         nombre: editando.nombre.trim(),
         proveedorId: editando.proveedorId,
         cantPresentacion: cant,
@@ -114,11 +120,63 @@ export default function Ingredientes() {
   const moneda = empresa?.moneda
   const usosDelEditando = editando?.id ? usosDe(editando.id, { recetas, menuItems }) : null
 
+  async function alElegirArchivo(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setImportando(true)
+    try {
+      const res = await importarIngredientes({
+        file, empresaId: empresa.id, planId: plan.id, proveedores, ingredientes,
+      })
+      let msj = `Importados: ${res.creados} ingrediente(s)`
+      if (res.proveedoresNuevos) msj += ` · ${res.proveedoresNuevos} proveedor(es) nuevos`
+      if (res.errores.length) msj += ` · ${res.errores.length} con error`
+      toast(msj, 6000)
+      if (res.errores.length) {
+        console.warn('Errores de importación:', res.errores)
+        alert(`Filas con problemas:\n${res.errores.slice(0, 12).map((x) => `• Fila ${x.fila}: ${x.motivo}`).join('\n')}${res.errores.length > 12 ? `\n…y ${res.errores.length - 12} más` : ''}`)
+      }
+      await registrarBitacora({
+        empresaId: empresa.id, uid: user.uid, correo: user.email,
+        accion: 'Importó ingredientes', detalle: `${res.creados} creados desde Excel`,
+      })
+    } catch (err) {
+      console.error(err); toast('No se pudo leer el archivo. ¿Es el Excel de la plantilla?')
+    } finally {
+      setImportando(false)
+      e.target.value = ''
+    }
+  }
+
   return (
     <div className="stack">
       <div className="row spread">
         <h2>🧺 Ingredientes</h2>
         <button className="btn btn-dorado" onClick={() => setEditando({ ...VACIO, proveedorId: filtroProv || '' })}>＋ Nuevo</button>
+      </div>
+
+      {/* Import / export */}
+      <div className="row row-wrap" style={{ gap: 8 }}>
+        <input ref={inputImport} type="file" accept=".xlsx,.xls,.csv" hidden onChange={alElegirArchivo} />
+        <button className="btn btn-fantasma" style={{ padding: '8px 12px' }}
+          onClick={() => inputImport.current?.click()} disabled={importando}>
+          {importando ? 'Importando…' : '📥 Importar Excel'}
+        </button>
+        <button className="btn btn-fantasma" style={{ padding: '8px 12px' }} onClick={descargarPlantillaIngredientes}>
+          ⬇️ Plantilla
+        </button>
+        {lista.length > 0 && (
+          <>
+            <button className="btn btn-fantasma" style={{ padding: '8px 12px' }}
+              onClick={() => exportarIngredientesExcel({ ingredientes: lista, provPorId, empresaNombre: empresa.nombre })}>
+              📊 Excel
+            </button>
+            <button className="btn btn-fantasma" style={{ padding: '8px 12px' }}
+              onClick={() => exportarIngredientesPDF({ ingredientes: lista, provPorId, empresaNombre: empresa.nombre, moneda })}>
+              📄 PDF
+            </button>
+          </>
+        )}
       </div>
 
       {proveedores.length > 1 && (
@@ -142,6 +200,7 @@ export default function Ingredientes() {
             <div>
               <div style={{ fontWeight: 700 }}>{ing.nombre} {ing.dePrueba && <span className="pill pill-gris">prueba</span>}</div>
               <div className="muted" style={{ fontSize: 13 }}>
+                {ing.codigo && <>🏷 {ing.codigo} · </>}
                 🚚 {provPorId[ing.proveedorId] || '⚠️ sin proveedor'} · {ing.cantPresentacion} {ing.unidad}
                 {ing.nota && <> · 📝 {ing.nota}</>}
               </div>
@@ -166,12 +225,20 @@ export default function Ingredientes() {
                 Al cambiar el precio, esos costeos se recalculan solos.
               </div>
             )}
-            <label className="campo">
-              <span>Nombre</span>
-              <input className="input" value={editando.nombre} autoFocus
-                onChange={(e) => setEditando({ ...editando, nombre: e.target.value })}
-                placeholder="Ej: Ron blanco" />
-            </label>
+            <div className="row" style={{ gap: 8 }}>
+              <label className="campo" style={{ flex: 2 }}>
+                <span>Nombre</span>
+                <input className="input" value={editando.nombre} autoFocus
+                  onChange={(e) => setEditando({ ...editando, nombre: e.target.value })}
+                  placeholder="Ej: Ron blanco" />
+              </label>
+              <label className="campo" style={{ flex: 1 }}>
+                <span>Código / SKU (opcional)</span>
+                <input className="input" value={editando.codigo || ''}
+                  onChange={(e) => setEditando({ ...editando, codigo: e.target.value })}
+                  placeholder="RON-750" />
+              </label>
+            </div>
             <label className="campo">
               <span>Proveedor (obligatorio)</span>
               <select className="input" value={editando.proveedorId}

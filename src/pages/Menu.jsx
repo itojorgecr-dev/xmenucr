@@ -17,6 +17,7 @@ import { formatMoneda, formatPorcentaje } from '../lib/format'
 import { registrarBitacora, eliminarArticulosPrueba } from '../lib/empresa'
 import { chequearLimite } from '../lib/limites'
 import { costoItem, ponderadoGrupo, porId } from '../lib/costeo'
+import { exportarMenuExcel, exportarMenuPDF } from '../lib/exportar'
 
 // Pastilla de % de costo con color según rango.
 function PillPct({ pct }) {
@@ -127,14 +128,40 @@ export default function Menu() {
   return (
     <div className="stack">
       {hayPrueba && (
-        <button className="btn btn-peligro btn-bloque" onClick={borrarPrueba} disabled={borrandoPrueba}>
-          {borrandoPrueba ? 'Borrando…' : '🗑 Borrar datos de prueba y empezar'}
-        </button>
+        <div className="card" style={{ borderColor: 'var(--naranja)', padding: 14 }}>
+          <div className="row spread row-wrap">
+            <div>
+              <span className="pill" style={{ background: '#fb923c22', color: 'var(--naranja)' }}>
+                🧪 VERSIÓN DEMO — DATOS DE PRUEBA
+              </span>
+              <div className="muted mt" style={{ fontSize: 13, marginTop: 6 }}>
+                Estás explorando con ejemplos. Cuando querás arrancar con tu menú real, borralos aquí.
+              </div>
+            </div>
+            <button className="btn btn-peligro" onClick={borrarPrueba} disabled={borrandoPrueba}>
+              {borrandoPrueba ? 'Borrando…' : '🗑 Eliminar datos de prueba'}
+            </button>
+          </div>
+        </div>
       )}
 
       <div className="row spread">
         <h2>🍽 Menú</h2>
-        <button className="btn btn-dorado" onClick={() => setEditando({})}>＋ Nuevo ítem</button>
+        <div className="row" style={{ gap: 8 }}>
+          {lista.length > 0 && (
+            <>
+              <button className="btn btn-fantasma" style={{ padding: '8px 12px' }} title="Exportar Excel"
+                onClick={() => exportarMenuExcel({ items: lista, empresaNombre: empresa.nombre, catPorId, restPorId })}>
+                📊
+              </button>
+              <button className="btn btn-fantasma" style={{ padding: '8px 12px' }} title="Exportar PDF"
+                onClick={() => exportarMenuPDF({ items: lista, empresaNombre: empresa.nombre, catPorId, restPorId, moneda })}>
+                📄
+              </button>
+            </>
+          )}
+          <button className="btn btn-dorado" onClick={() => setEditando({})}>＋ Nuevo ítem</button>
+        </div>
       </div>
 
       {restaurantes.length > 1 && (
