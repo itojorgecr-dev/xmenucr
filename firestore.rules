@@ -1,0 +1,168 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────
+// XMenú CR — Reglas de seguridad Firestore (multiempresa)
+// ─────────────────────────────────────────────────────────────
+// Principio: cada documento del negocio lleva `empresaId` y solo lo
+// leen/escriben miembros de esa empresa según su rol.
+//
+// La pertenencia se guarda como un doc con ID determinístico:
+//     miembros/{empresaId}_{uid}
+// para que las reglas puedan resolverla con get()/exists() sin queries.
+//
+// Roles: 'dueño' | 'editor' | 'operador' | 'lector'
+//  - dueño:    todo + plan/pago + colaboradores
+//  - editor:   todo el contenido (no plan, no miembros)
+//  - operador: ingredientes + pedidos (NO recetas ni ítems de menú)
+//  - lector:   solo lectura
+// ─────────────────────────────────────────────────────────────
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ── Helpers ──
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function membershipPath(empresaId) {
+      return /databases/$(database)/documents/miembros/$(empresaId + '_' + request.auth.uid);
+    }
+
+    function isMember(empresaId) {
+      return isSignedIn() && exists(membershipPath(empresaId));
+    }
+
+    function role(empresaId) {
+      return get(membershipPath(empresaId)).data.rol;
+    }
+
+    function hasRole(empresaId, roles) {
+      return isMember(empresaId) && (role(empresaId) in roles);
+    }
+
+    // Puede tocar contenido general (proveedores, categorías, recetas, menú...).
+    function canEditContent(empresaId) {
+      return hasRole(empresaId, ['dueño', 'editor']);
+    }
+
+    // El superadmin (Jorge) se identifica por token custom claim.
+    function isSuperadmin() {
+      return isSignedIn() && request.auth.token.superadmin == true;
+    }
+
+    // ── empresas ──
+    // Crear: cualquiera autenticado que se ponga a sí mismo como dueño,
+    // con plan inicial 'demo'. Leer/editar: miembros; borrar: solo dueño.
+    match /empresas/{empresaId} {
+      allow read: if isMember(empresaId) || isSuperadmin();
+      allow create: if isSignedIn()
+                    && request.resource.data.ownerUid == request.auth.uid
+                    && request.resource.data.plan == 'demo';
+      allow update: if hasRole(empresaId, ['dueño']) || isSuperadmin();
+      allow delete: if hasRole(empresaId, ['dueño']);
+    }
+
+    // ── miembros ──  id = {empresaId}_{uid}
+    // El dueño gestiona colaboradores. En el bootstrap, el creador de la
+    // empresa puede crear SU PROPIO doc de miembro como 'dueño'.
+    match /miembros/{miembroId} {
+      allow read: if isSignedIn()
+                  && (resource.data.uid == request.auth.uid
+                      || hasRole(resource.data.empresaId, ['dueño'])
+                      || isSuperadmin());
+
+      // Bootstrap del dueño: crea su propio miembro al fundar la empresa.
+      allow create: if isSignedIn()
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.rol == 'dueño'
+                    && miembroId == request.resource.data.empresaId + '_' + request.auth.uid
+                    && get(/databases/$(database)/documents/empresas/$(request.resource.data.empresaId)).data.ownerUid == request.auth.uid;
+
+      // Alta/edición de otros colaboradores: solo el dueño de esa empresa.
+      allow write: if hasRole(request.resource.data.empresaId, ['dueño'])
+                   || hasRole(resource.data.empresaId, ['dueño'])
+                   || isSuperadmin();
+    }
+
+    // ── invitaciones ──  (colaboradores por correo; se aceptan al ingresar)
+    match /invitaciones/{invId} {
+      allow read: if isSignedIn();
+      allow write: if hasRole(request.resource.data.empresaId, ['dueño'])
+                   || isSuperadmin();
+    }
+
+    // ── Contenido del negocio con empresaId ──
+
+    // Restaurantes, categorías, unidades abstractas, proveedores:
+    // lectura para miembros; escritura para dueño/editor.
+    match /restaurantes/{id} {
+      allow read: if isMember(resource.data.empresaId);
+      allow create: if canEditContent(request.resource.data.empresaId);
+      allow update, delete: if canEditContent(resource.data.empresaId);
+    }
+    match /categorias/{id} {
+      allow read: if isMember(resource.data.empresaId);
+      allow create: if canEditContent(request.resource.data.empresaId);
+      allow update, delete: if canEditContent(resource.data.empresaId);
+    }
+    match /unidadesAbs/{id} {
+      allow read: if isMember(resource.data.empresaId);
+      allow create: if canEditContent(request.resource.data.empresaId);
+      allow update, delete: if canEditContent(resource.data.empresaId);
+    }
+    match /proveedores/{id} {
+      allow read: if isMember(resource.data.empresaId);
+      allow create: if canEditContent(request.resource.data.empresaId);
+      allow update, delete: if canEditContent(resource.data.empresaId);
+    }
+
+    // Ingredientes y pedidos: además del dueño/editor, el OPERADOR puede.
+    match /ingredientes/{id} {
+      allow read: if isMember(resource.data.empresaId);
+      allow create: if hasRole(request.resource.data.empresaId, ['dueño', 'editor', 'operador']);
+      allow update, delete: if hasRole(resource.data.empresaId, ['dueño', 'editor', 'operador']);
+    }
+    match /pedidos/{id} {
+      allow read: if isMember(resource.data.empresaId);
+      allow create: if hasRole(request.resource.data.empresaId, ['dueño', 'editor', 'operador']);
+      allow update, delete: if hasRole(resource.data.empresaId, ['dueño', 'editor', 'operador']);
+    }
+
+    // Recetas e ítems de menú: NO el operador (solo dueño/editor).
+    match /recetas/{id} {
+      allow read: if isMember(resource.data.empresaId);
+      allow create: if canEditContent(request.resource.data.empresaId);
+      allow update, delete: if canEditContent(resource.data.empresaId);
+    }
+    match /menuItems/{id} {
+      allow read: if isMember(resource.data.empresaId);
+      allow create: if canEditContent(request.resource.data.empresaId);
+      allow update, delete: if canEditContent(resource.data.empresaId);
+    }
+
+    // ── bitácora ──  la ven dueño y editor; la app la escribe.
+    match /bitacora/{id} {
+      allow read: if hasRole(resource.data.empresaId, ['dueño', 'editor']);
+      allow create: if isMember(request.resource.data.empresaId);
+      allow update, delete: if false; // append-only
+    }
+
+    // ── catálogos maestros de proveedores (fase PR5) ──
+    // Lectura para cualquier autenticado (el superadmin decide habilitación
+    // por plan/empresa en la app); escritura solo superadmin.
+    match /catalogos/{catId} {
+      allow read: if isSignedIn();
+      allow write: if isSuperadmin();
+      match /productos/{prodId} {
+        allow read: if isSignedIn();
+        allow write: if isSuperadmin();
+      }
+    }
+
+    // Cerrado por defecto para todo lo demás.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

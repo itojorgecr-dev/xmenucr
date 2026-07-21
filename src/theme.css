@@ -1,0 +1,156 @@
+/* ─────────────────────────────────────────────────────────────
+   XMenú CR — Tema global
+   Oscuro #141233 → #241f4d, dorado #f9c74f. Mobile-first, es-CR.
+   ───────────────────────────────────────────────────────────── */
+:root {
+  --fondo-top: #141233;
+  --fondo-bottom: #241f4d;
+  --dorado: #f9c74f;
+  --dorado-suave: #f9c74f22;
+  --texto: #f4f2ff;
+  --texto-tenue: #b9b4d8;
+  --panel: #1e1a40;
+  --panel-2: #2a2456;
+  --borde: #3a3470;
+  --verde: #4ade80;
+  --rojo: #f87171;
+  --naranja: #fb923c;
+  --radio: 14px;
+  --sombra: 0 8px 30px rgba(0, 0, 0, 0.35);
+  --tabbar-h: 66px;
+}
+
+* { box-sizing: border-box; }
+
+html, body, #root {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  color: var(--texto);
+  background: linear-gradient(160deg, var(--fondo-top), var(--fondo-bottom));
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  line-height: 1.5;
+}
+
+a { color: var(--dorado); text-decoration: none; }
+h1, h2, h3 { margin: 0 0 0.4em; font-weight: 700; }
+
+/* ── Layout de app con barra de pestañas móvil ── */
+.app-shell { min-height: 100vh; padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom)); }
+.app-header {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; padding: 12px 16px;
+  background: rgba(20, 18, 51, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--borde);
+}
+.app-header .marca { font-weight: 800; letter-spacing: 0.3px; }
+.app-header .marca b { color: var(--dorado); }
+.app-main { padding: 16px; max-width: 900px; margin: 0 auto; }
+
+/* Barra de pestañas inferior (móvil): icono grande + etiqueta. */
+.tabbar {
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+  display: flex; justify-content: space-around; align-items: stretch;
+  height: calc(var(--tabbar-h) + env(safe-area-inset-bottom));
+  padding-bottom: env(safe-area-inset-bottom);
+  background: rgba(30, 26, 64, 0.96);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--borde);
+}
+.tabbar a {
+  flex: 1; display: flex; flex-direction: column; align-items: center;
+  justify-content: center; gap: 2px;
+  color: var(--texto-tenue); font-size: 11px; font-weight: 600;
+}
+.tabbar a .ico { font-size: 22px; line-height: 1; }
+.tabbar a.activa { color: var(--dorado); }
+.tabbar a.activa .ico { transform: translateY(-1px); }
+
+/* ── Componentes ── */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 16px;
+  box-shadow: var(--sombra);
+}
+.card + .card { margin-top: 14px; }
+
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px 18px; border-radius: 12px; border: 1px solid transparent;
+  font-weight: 700; font-size: 15px; cursor: pointer;
+  transition: transform 0.05s ease, filter 0.15s ease;
+  background: var(--panel-2); color: var(--texto);
+}
+.btn:active { transform: translateY(1px); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-dorado { background: var(--dorado); color: #1a1533; }
+.btn-dorado:hover { filter: brightness(1.05); }
+.btn-fantasma { background: transparent; border-color: var(--borde); }
+.btn-peligro { background: transparent; border-color: var(--rojo); color: var(--rojo); }
+.btn-bloque { width: 100%; }
+
+.input, select.input, textarea.input {
+  width: 100%; padding: 12px 14px; border-radius: 12px;
+  background: var(--panel-2); border: 1px solid var(--borde);
+  color: var(--texto); font-size: 15px; font-family: inherit;
+}
+.input:focus { outline: 2px solid var(--dorado); outline-offset: 0; }
+label.campo { display: block; margin-bottom: 12px; }
+label.campo span { display: block; margin-bottom: 6px; color: var(--texto-tenue); font-size: 13px; font-weight: 600; }
+
+/* Pastillas / chips */
+.pill { display: inline-block; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+.pill-dorado { background: var(--dorado-suave); color: var(--dorado); }
+.pill-verde { background: #4ade8022; color: var(--verde); }
+.pill-rojo { background: #f8717122; color: var(--rojo); }
+.pill-gris { background: #ffffff14; color: var(--texto-tenue); }
+
+/* Guía en vacíos (empty states direccionales) */
+.vacio {
+  text-align: center; padding: 32px 20px;
+  border: 1px dashed var(--borde); border-radius: var(--radio);
+  color: var(--texto-tenue);
+}
+.vacio .emoji { font-size: 40px; display: block; margin-bottom: 10px; }
+.vacio h3 { color: var(--texto); }
+.vacio .btn { margin-top: 14px; }
+
+/* Aviso / banners */
+.aviso { border-radius: 12px; padding: 14px 16px; border: 1px solid var(--borde); }
+.aviso-info { background: #f9c74f14; border-color: #f9c74f55; }
+.aviso-peligro { background: #f8717114; border-color: #f8717155; }
+
+.muted { color: var(--texto-tenue); }
+.center { text-align: center; }
+.row { display: flex; gap: 10px; align-items: center; }
+.row-wrap { flex-wrap: wrap; }
+.spread { justify-content: space-between; }
+.stack { display: flex; flex-direction: column; gap: 10px; }
+.mt { margin-top: 14px; }
+.mt-lg { margin-top: 24px; }
+
+/* Cargando */
+.cargando { display: grid; place-items: center; min-height: 60vh; color: var(--texto-tenue); }
+.spinner {
+  width: 34px; height: 34px; border-radius: 50%;
+  border: 3px solid var(--borde); border-top-color: var(--dorado);
+  animation: girar 0.8s linear infinite;
+}
+@keyframes girar { to { transform: rotate(360deg); } }
+
+/* Toast simple */
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--tabbar-h) + 18px);
+  transform: translateX(-50%); z-index: 60;
+  background: var(--panel-2); border: 1px solid var(--borde);
+  padding: 12px 18px; border-radius: 12px; box-shadow: var(--sombra);
+  font-weight: 600; max-width: 90vw;
+}
