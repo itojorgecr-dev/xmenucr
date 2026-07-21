@@ -1,0 +1,35 @@
+rules_version = '2';
+
+// ─────────────────────────────────────────────────────────────
+// XMenú CR — Reglas de Storage (multiempresa)
+// ─────────────────────────────────────────────────────────────
+// Las imágenes (fotos de platillos, etc.) se guardan bajo:
+//     empresas/{empresaId}/...
+// y solo las lee/escribe un miembro de esa empresa.
+//
+// La pertenencia se resuelve contra Firestore con el mismo patrón de
+// ID determinístico: miembros/{empresaId}_{uid}
+// ─────────────────────────────────────────────────────────────
+
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    function isMember(empresaId) {
+      return request.auth != null
+        && firestore.exists(/databases/(default)/documents/miembros/$(empresaId + '_' + request.auth.uid));
+    }
+
+    match /empresas/{empresaId}/{allPaths=**} {
+      allow read: if isMember(empresaId);
+      // Escritura: miembro de la empresa, solo imágenes y hasta 5 MB.
+      allow write: if isMember(empresaId)
+                   && request.resource.size < 5 * 1024 * 1024
+                   && request.resource.contentType.matches('image/.*');
+    }
+
+    // Cerrado por defecto.
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
