@@ -22,11 +22,25 @@ import Superadmin from './pages/Superadmin'
 function ConfigFaltante() {
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
-      <div className="card" style={{ maxWidth: 520 }}>
-        <h2>Falta configurar Firebase</h2>
+      <div className="card" style={{ maxWidth: 560 }}>
+        <h2>⚙️ Falta configurar Firebase</h2>
         <p className="muted">
-          Cargá las variables <code>VITE_FIREBASE_*</code> en Vercel (o en tu
-          <code> .env.local</code>) según <code>.env.example</code> y volvé a desplegar.
+          La app está desplegada pero no encuentra las variables de Firebase, así
+          que no puede mostrar el login. Para activarla:
+        </p>
+        <ol className="muted" style={{ paddingLeft: 20, lineHeight: 1.8 }}>
+          <li>En <b>Firebase Console</b> → Configuración del proyecto → Tus apps →
+            App web, copiá la configuración del SDK.</li>
+          <li>En <b>Vercel</b> → Settings → Environment Variables, cargá cada valor
+            como <code>VITE_FIREBASE_API_KEY</code>, <code>VITE_FIREBASE_AUTH_DOMAIN</code>,
+            <code> VITE_FIREBASE_PROJECT_ID</code>, <code>VITE_FIREBASE_STORAGE_BUCKET</code>,
+            <code> VITE_FIREBASE_MESSAGING_SENDER_ID</code> y <code>VITE_FIREBASE_APP_ID</code>
+            (ver <code>.env.example</code>).</li>
+          <li>Marcá que apliquen también a <b>Preview</b>, no solo a Production.</li>
+          <li><b>Redeploy</b> desde Vercel para que tomen efecto.</li>
+        </ol>
+        <p className="muted">
+          En local: copiá <code>.env.example</code> a <code>.env.local</code> y completá los valores.
         </p>
       </div>
     </div>

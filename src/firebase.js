@@ -18,15 +18,27 @@ const firebaseConfig = {
 
 export const firebaseListo = Boolean(firebaseConfig.apiKey && firebaseConfig.projectId)
 
-const app = initializeApp(firebaseConfig)
+// Si faltan las variables VITE_FIREBASE_*, NO inicializamos el SDK:
+// getAuth() lanza auth/invalid-api-key al importar el módulo y la SPA
+// quedaría en blanco. Con app=null, App muestra la pantalla de
+// "Falta configurar Firebase" con los pasos.
+let app = null
+let auth = null
+let googleProvider = null
+let db = null
+let storage = null
 
-export const auth = getAuth(app)
-// Flujos nativos de Firebase Auth en español (verificación / reset).
-auth.languageCode = 'es'
+if (firebaseListo) {
+  app = initializeApp(firebaseConfig)
+  auth = getAuth(app)
+  // Flujos nativos de Firebase Auth en español (verificación / reset).
+  auth.languageCode = 'es'
+  googleProvider = new GoogleAuthProvider()
+  db = getFirestore(app)
+  storage = getStorage(app)
+}
 
-export const googleProvider = new GoogleAuthProvider()
-export const db = getFirestore(app)
-export const storage = getStorage(app)
+export { auth, googleProvider, db, storage }
 
 // UID del superadmin (Jorge). Además del custom claim `superadmin` en el
 // token, dejamos este fallback por UID para el panel del cliente.
