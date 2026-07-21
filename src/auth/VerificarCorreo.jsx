@@ -15,8 +15,12 @@ export default function VerificarCorreo() {
     try {
       await reenviarVerificacion()
       toast('Correo de verificación reenviado. Revisá también el spam.')
-    } catch {
-      toast('No se pudo reenviar. Esperá un minuto y probá de nuevo.')
+    } catch (e) {
+      if (e?.code === 'auth/too-many-requests') {
+        toast('Firebase bloqueó los reenvíos por seguridad. Esperá 30–60 minutos y probá de nuevo.', 6000)
+      } else {
+        toast('No se pudo reenviar. Probá de nuevo en un rato.')
+      }
     } finally {
       setEnviando(false)
     }
