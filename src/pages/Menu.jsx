@@ -14,7 +14,7 @@ import Cargando from '../components/Cargando'
 import Hoja from '../components/Hoja'
 import ItemEditor from './ItemEditor'
 import { formatMoneda, formatPorcentaje } from '../lib/format'
-import { registrarBitacora } from '../lib/empresa'
+import { registrarBitacora, eliminarArticulosPrueba } from '../lib/empresa'
 import { chequearLimite } from '../lib/limites'
 import { costoItem, ponderadoGrupo, porId } from '../lib/costeo'
 
@@ -40,6 +40,7 @@ export default function Menu() {
   const [detalle, setDetalle] = useState(null)   // ítem en hoja de detalle
   const [editando, setEditando] = useState(null) // ítem en editor
   const [copiando, setCopiando] = useState(null) // ítem a copiar
+  const [borrandoPrueba, setBorrandoPrueba] = useState(false)
 
   const mapas = useMemo(() => ({ ingredientes: porId(ingredientes), recetas: porId(recetas) }), [ingredientes, recetas])
   const catPorId = useMemo(() => Object.fromEntries(categorias.map((c) => [c.id, c.nombre])), [categorias])
@@ -103,8 +104,34 @@ export default function Menu() {
     )
   }
 
+  const hayPrueba = [menuItems, categorias, ingredientes, recetas]
+    .some((col) => col.some((x) => x.dePrueba))
+
+  async function borrarPrueba() {
+    if (!confirm('¿Borrar TODOS los datos de prueba (ingredientes, recetas, ítems, categorías y proveedores marcados "prueba") y empezar con tu menú real?')) return
+    setBorrandoPrueba(true)
+    try {
+      const n = await eliminarArticulosPrueba(empresa.id)
+      await registrarBitacora({
+        empresaId: empresa.id, uid: user.uid, correo: user.email,
+        accion: 'Borró datos de prueba', detalle: `${n} documentos`,
+      })
+      toast(`Listo: se borraron ${n} datos de prueba. ¡A armar tu menú real! 🚀`)
+    } catch (err) {
+      console.error(err); toast('No se pudieron borrar. Probá de nuevo.')
+    } finally {
+      setBorrandoPrueba(false)
+    }
+  }
+
   return (
     <div className="stack">
+      {hayPrueba && (
+        <button className="btn btn-peligro btn-bloque" onClick={borrarPrueba} disabled={borrandoPrueba}>
+          {borrandoPrueba ? 'Borrando…' : '🗑 Borrar datos de prueba y empezar'}
+        </button>
+      )}
+
       <div className="row spread">
         <h2>🍽 Menú</h2>
         <button className="btn btn-dorado" onClick={() => setEditando({})}>＋ Nuevo ítem</button>
