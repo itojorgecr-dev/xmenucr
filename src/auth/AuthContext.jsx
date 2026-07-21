@@ -13,7 +13,7 @@ import {
   updateProfile,
   signOut,
 } from 'firebase/auth'
-import { auth, googleProvider, SUPERADMIN_UID } from '../firebase'
+import { auth, googleProvider, SUPERADMIN_UID, SUPERADMIN_CORREO } from '../firebase'
 
 const AuthCtx = createContext(null)
 
@@ -42,6 +42,26 @@ export function AuthProvider({ children }) {
       setCargando(false)
     })
   }, [])
+
+  // Si entra la cuenta del superadmin, activamos su custom claim (una vez).
+  // Las reglas de Firestore usan ese claim; el refresh del token lo aplica.
+  useEffect(() => {
+    if (!user || (user.email || '').toLowerCase() !== SUPERADMIN_CORREO) return
+    ;(async () => {
+      try {
+        const actual = await auth.currentUser.getIdTokenResult()
+        if (actual.claims.superadmin) return
+        const token = await auth.currentUser.getIdToken()
+        const r = await fetch('/api/claim-superadmin', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${token}` },
+        })
+        if (r.ok) await auth.currentUser.getIdToken(true) // refresca el token con el claim
+      } catch {
+        // Silencioso: el panel del cliente igual se habilita por correo.
+      }
+    })()
+  }, [user])
 
   // Recarga el usuario desde Firebase (para "Ya verifiqué mi correo").
   const refrescar = useCallback(async () => {
@@ -76,7 +96,11 @@ export function AuthProvider({ children }) {
     refrescar,
   }
 
-  const esSuperadmin = Boolean(user && user.uid === SUPERADMIN_UID)
+  const esSuperadmin = Boolean(
+    user &&
+      ((user.email || '').toLowerCase() === SUPERADMIN_CORREO ||
+        (SUPERADMIN_UID && user.uid === SUPERADMIN_UID))
+  )
 
   // Cuenta de correo/clave sin verificar: se bloquea el ingreso a la app.
   const requiereVerificacion = Boolean(user && user.esPassword && !user.emailVerified)

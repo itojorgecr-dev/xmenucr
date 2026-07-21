@@ -40,8 +40,10 @@ if (firebaseListo) {
 
 export { auth, googleProvider, db, storage }
 
-// UID del superadmin (Jorge). Además del custom claim `superadmin` en el
-// token, dejamos este fallback por UID para el panel del cliente.
+// Superadmin (Jorge): por correo. La app activa el custom claim
+// `superadmin` (fuente de verdad de las reglas) vía /api/claim-superadmin.
+// El UID por variable de entorno queda como respaldo opcional.
+export const SUPERADMIN_CORREO = 'itojorgecr@gmail.com'
 export const SUPERADMIN_UID = import.meta.env.VITE_SUPERADMIN_UID || ''
 
 export default app
