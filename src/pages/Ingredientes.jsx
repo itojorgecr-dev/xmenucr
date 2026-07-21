@@ -156,6 +156,12 @@ export default function Ingredientes() {
       </div>
 
       {/* Import / export */}
+      <p className="muted" style={{ fontSize: 13, margin: 0 }}>
+        💡 ¿Tenés muchos ingredientes? Descargá la <b>⬇️ Plantilla</b> de Excel,
+        llenala con tus productos (código/SKU, nombre, proveedor, cantidad, unidad y
+        precio) y subila con <b>📥 Importar</b> — mucho más rápido que digitarlos uno
+        por uno. Los proveedores que no existan se crean solos.
+      </p>
       <div className="row row-wrap" style={{ gap: 8 }}>
         <input ref={inputImport} type="file" accept=".xlsx,.xls,.csv" hidden onChange={alElegirArchivo} />
         <button className="btn btn-fantasma" style={{ padding: '8px 12px' }}

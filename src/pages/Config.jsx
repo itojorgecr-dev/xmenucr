@@ -163,8 +163,10 @@ export default function Config() {
         <h3>🏠 Restaurantes <span className="muted" style={{ fontSize: 13 }}>({restaurantes.length}/{plan.restaurantes})</span></h3>
         <p className="muted" style={{ fontSize: 13, marginTop: 0 }}>
           💡 Tranquilo: tus ingredientes, recetas y proveedores se comparten entre
-          <b> todos</b> tus restaurantes — no hay que duplicarlos. Solo los ítems del
-          menú son propios de cada restaurante.
+          <b> todos</b> tus restaurantes — no hay que duplicarlos. Los <b>menús</b> sí
+          son de cada restaurante: si querés, podés copiar un ítem de un negocio a
+          otro y modificarle el precio o la receta a tu gusto, según el criterio de
+          cada restaurante.
         </p>
         {cargR ? <p className="muted">Cargando…</p> : (
           <div className="stack">
