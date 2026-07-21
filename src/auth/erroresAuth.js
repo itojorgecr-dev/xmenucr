@@ -12,6 +12,9 @@ const MAPA = {
   'auth/cancelled-popup-request': 'Se canceló el ingreso. Probá de nuevo.',
   'auth/network-request-failed': 'Problema de conexión. Revisá tu internet.',
   'auth/operation-not-allowed': 'Ese método de ingreso no está habilitado.',
+  'auth/unauthorized-domain':
+    'Este dominio no está autorizado para el ingreso con Google. Hay que agregarlo en Firebase → Authentication → Configuración → Dominios autorizados.',
+  'auth/popup-blocked': 'El navegador bloqueó la ventana de Google. Permitila y probá de nuevo.',
 }
 
 export function traducirErrorAuth(error) {
