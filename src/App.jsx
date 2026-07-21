@@ -20,27 +20,36 @@ import Superadmin from './pages/Superadmin'
 
 // Aviso cuando falta la config de Firebase (deploy sin variables).
 function ConfigFaltante() {
+  // Diagnóstico: solo mostramos si cada variable LLEGÓ al build (nunca su valor).
+  const estado = [
+    ['VITE_FIREBASE_API_KEY', import.meta.env.VITE_FIREBASE_API_KEY],
+    ['VITE_FIREBASE_AUTH_DOMAIN', import.meta.env.VITE_FIREBASE_AUTH_DOMAIN],
+    ['VITE_FIREBASE_PROJECT_ID', import.meta.env.VITE_FIREBASE_PROJECT_ID],
+    ['VITE_FIREBASE_STORAGE_BUCKET', import.meta.env.VITE_FIREBASE_STORAGE_BUCKET],
+    ['VITE_FIREBASE_MESSAGING_SENDER_ID', import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID],
+    ['VITE_FIREBASE_APP_ID', import.meta.env.VITE_FIREBASE_APP_ID],
+  ]
   return (
     <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: 24 }}>
       <div className="card" style={{ maxWidth: 560 }}>
         <h2>⚙️ Falta configurar Firebase</h2>
         <p className="muted">
-          La app está desplegada pero no encuentra las variables de Firebase, así
-          que no puede mostrar el login. Para activarla:
+          La app está desplegada pero al momento del build no llegaron estas
+          variables. Estado de cada una en ESTE deploy:
         </p>
-        <ol className="muted" style={{ paddingLeft: 20, lineHeight: 1.8 }}>
-          <li>En <b>Firebase Console</b> → Configuración del proyecto → Tus apps →
-            App web, copiá la configuración del SDK.</li>
-          <li>En <b>Vercel</b> → Settings → Environment Variables, cargá cada valor
-            como <code>VITE_FIREBASE_API_KEY</code>, <code>VITE_FIREBASE_AUTH_DOMAIN</code>,
-            <code> VITE_FIREBASE_PROJECT_ID</code>, <code>VITE_FIREBASE_STORAGE_BUCKET</code>,
-            <code> VITE_FIREBASE_MESSAGING_SENDER_ID</code> y <code>VITE_FIREBASE_APP_ID</code>
-            (ver <code>.env.example</code>).</li>
-          <li>Marcá que apliquen también a <b>Preview</b>, no solo a Production.</li>
-          <li><b>Redeploy</b> desde Vercel para que tomen efecto.</li>
-        </ol>
+        <ul style={{ listStyle: 'none', padding: 0, lineHeight: 2, fontFamily: 'monospace', fontSize: 13 }}>
+          {estado.map(([nombre, valor]) => (
+            <li key={nombre}>
+              {valor ? '✅' : '❌'} {nombre}
+              {valor ? '' : ' — no llegó'}
+            </li>
+          ))}
+        </ul>
         <p className="muted">
-          En local: copiá <code>.env.example</code> a <code>.env.local</code> y completá los valores.
+          Para arreglarlo: en <b>Vercel</b> → Settings → Environment Variables,
+          revisá que cada ❌ exista con ese nombre EXACTO y aplique a
+          <b> Preview</b>. Después hacé <b>Redeploy</b> (las variables solo
+          entran en builds nuevos).
         </p>
       </div>
     </div>
