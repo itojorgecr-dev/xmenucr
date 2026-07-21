@@ -1,17 +1,7 @@
 // XMenú CR — 🤖 IA que acomoda la preparación (Vercel serverless, Node ESM).
 // El usuario escribe/dicta la preparación desordenada y la devolvemos como
 // pasos numerados y presentables. Requiere sesión de Firebase (ID token).
-import Anthropic from '@anthropic-ai/sdk'
-import { initializeApp, cert, getApps } from 'firebase-admin/app'
-import { getAuth } from 'firebase-admin/auth'
-
-function adminApp() {
-  if (getApps().length) return getApps()[0]
-  const cuenta = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}')
-  // Arreglo clásico: Vercel a veces guarda la llave con \n literales.
-  if (cuenta.private_key) cuenta.private_key = cuenta.private_key.replace(/\\n/g, '\n')
-  return initializeApp({ credential: cert(cuenta) })
-}
+// Imports dinámicos + try/catch total para que cualquier falla dé detalle.
 
 const SISTEMA = `Sos el asistente de XMenú CR, una app de costeo para restaurantes de Costa Rica.
 Tu única tarea: tomar la preparación de un platillo o cóctel escrita de forma
@@ -33,10 +23,18 @@ export default async function handler(req, res) {
 
   // Autenticación: solo usuarios con sesión de la app pueden usar la IA.
   try {
+    const { initializeApp, cert, getApps } = await import('firebase-admin/app')
+    const { getAuth } = await import('firebase-admin/auth')
+
+    const cuenta = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT || '{}')
+    if (cuenta.private_key) cuenta.private_key = cuenta.private_key.replace(/\\n/g, '\n')
+    const app = getApps().length ? getApps()[0] : initializeApp({ credential: cert(cuenta) })
+
     const token = (req.headers.authorization || '').replace(/^Bearer\s+/i, '')
     if (!token) return res.status(401).json({ error: 'Falta el token de sesión' })
-    await getAuth(adminApp()).verifyIdToken(token)
-  } catch {
+    await getAuth(app).verifyIdToken(token)
+  } catch (e) {
+    console.error('ia auth:', e?.message)
     return res.status(401).json({ error: 'Sesión inválida' })
   }
 
@@ -45,6 +43,7 @@ export default async function handler(req, res) {
   if (texto.length > 8000) return res.status(400).json({ error: 'El texto es demasiado largo' })
 
   try {
+    const { default: Anthropic } = await import('@anthropic-ai/sdk')
     const anthropic = new Anthropic() // lee ANTHROPIC_API_KEY del entorno
     const respuesta = await anthropic.messages.create({
       model: 'claude-sonnet-4-6',
@@ -57,7 +56,7 @@ export default async function handler(req, res) {
     const bloque = respuesta.content.find((b) => b.type === 'text')
     return res.status(200).json({ preparacion: bloque?.text?.trim() || '' })
   } catch (e) {
-    if (e instanceof Anthropic.RateLimitError) {
+    if (e?.status === 429) {
       return res.status(429).json({ error: 'La IA está ocupada. Probá en un momento.' })
     }
     console.error('ia.js:', e?.status || '', e?.message)
